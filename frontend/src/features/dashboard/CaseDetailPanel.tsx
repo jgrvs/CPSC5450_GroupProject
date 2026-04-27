@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Badge, Button, Group, Loader, Modal, Paper, ScrollArea, Stack, Text, Title } from '@mantine/core'
+import { Alert, Badge, Button, Group, Loader, Modal, Paper, ScrollArea, Stack, Text, Title } from '@mantine/core'
 import { labelColor } from './colors'
 import { ActionSection } from './ActionSection'
 import { EvidenceSection } from './EvidenceSection'
@@ -95,6 +95,21 @@ export function CaseDetailPanel({
                 </Badge>
               </Group>
             </Group>
+
+          {selectedItem.parsed.duplicate_of && (
+            <Alert color="orange" variant="light" title="Duplicate email">
+              This email matches a campaign template already in the queue. Original case:{' '}
+              <Text span size="xs" ff="monospace">{selectedItem.parsed.duplicate_of}</Text>
+            </Alert>
+          )}
+
+          {selectedItem.ui.duplicateCount > 0 && (
+            <Alert color="violet" variant="light" title={`${selectedItem.ui.duplicateCount} similar email${selectedItem.ui.duplicateCount > 1 ? 's' : ''} in queue`}>
+              Other emails share this campaign template. Look for the{' '}
+              <Badge size="xs" color="violet" variant="light">+{selectedItem.ui.duplicateCount} similar</Badge>{' '}
+              badge in the queue.
+            </Alert>
+          )}
 
           <Paper withBorder radius="md" p="sm">
             <Stack gap={4}>

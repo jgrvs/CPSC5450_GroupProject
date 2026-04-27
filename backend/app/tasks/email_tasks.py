@@ -44,7 +44,21 @@ def parse_inbox_email(self, event_id: str, processing_path: str) -> dict:
             t2 = time.perf_counter()
 
             out_path = write_parsed_json(event_id, payload)
-            crud.upsert_email_parsed(session, event_id=event_uuid, payload=payload)
+
+            canonical_fp = payload.get("canonical_fingerprint")
+
+            # Best-effort pre-check (may miss concurrent emails — reconcile fixes that)
+            duplicate_of = None
+            if canonical_fp:
+                existing = crud.find_by_canonical_fingerprint(session, canonical_fp)
+                if existing and existing.event_id != event_uuid:
+                    duplicate_of = existing.event_id
+
+            crud.upsert_email_parsed(session, event_id=event_uuid, payload=payload, duplicate_of=duplicate_of)
+
+            # Fix any races: whichever task runs last will correct all duplicate_of values
+            if canonical_fp:
+                crud.reconcile_duplicates(session, canonical_fp)
             t3 = time.perf_counter()
 
             done_path = archive_raw_success(Path(processing_path))

@@ -132,11 +132,47 @@ def set_email_event_status(
     session.commit()
 
 
+def find_by_canonical_fingerprint(session: Session, canonical_fingerprint: str) -> EmailParsed | None:
+    statement = select(EmailParsed).where(EmailParsed.canonical_fingerprint == canonical_fingerprint)
+    return session.exec(statement).first()
+
+
+def reconcile_duplicates(session: Session, canonical_fingerprint: str) -> None:
+    """Ensure exactly one root and all others point to it.
+
+    Run after every upsert to fix races where concurrent workers all inserted
+    with duplicate_of=None before seeing each other's committed rows.
+    Root is chosen deterministically by lowest event_id UUID value.
+    """
+    rows = session.exec(
+        select(EmailParsed)
+        .where(EmailParsed.canonical_fingerprint == canonical_fingerprint)
+        .order_by(EmailParsed.event_id)
+    ).all()
+
+    if len(rows) <= 1:
+        return
+
+    root_id = rows[0].event_id
+    for row in rows:
+        if row.event_id == root_id:
+            if row.duplicate_of is not None:
+                row.duplicate_of = None
+                session.add(row)
+        else:
+            if row.duplicate_of != root_id:
+                row.duplicate_of = root_id
+                session.add(row)
+
+    session.commit()
+
+
 def upsert_email_parsed(
     session: Session,
     *,
     event_id: UUID,
     payload: dict,
+    duplicate_of: Optional[UUID] = None,
 ) -> None:
     existing = session.get(EmailParsed, event_id)
 
@@ -149,11 +185,14 @@ def upsert_email_parsed(
     fp = payload.get("fingerprint")
     if not fp:
         raise ValueError("parsed payload missing fingerprint")
+    cfp = payload.get("canonical_fingerprint")
 
     if existing is None:
         row = EmailParsed(
             event_id=event_id,
             fingerprint=fp,
+            canonical_fingerprint=cfp,
+            duplicate_of=duplicate_of,
             from_address=headers.get("from_address"),
             to_address=headers.get("to_address"),
             subject=headers.get("subject"),
@@ -178,6 +217,8 @@ def upsert_email_parsed(
     else:
         # if reprocessed, overwrite fields
         existing.fingerprint = fp
+        existing.canonical_fingerprint = cfp
+        existing.duplicate_of = duplicate_of
         existing.from_address = headers.get("from_address")
         existing.to_address = headers.get("to_address")
         existing.subject = headers.get("subject")

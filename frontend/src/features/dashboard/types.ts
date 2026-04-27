@@ -4,6 +4,8 @@ export type Severity = 'critical' | 'high' | 'medium' | 'low'
 
 export type ParsedEmail = {
   email_id: string
+  canonical_fingerprint: string | null
+  duplicate_of: string | null
   headers: {
     from_address: string | null
     subject: string | null
@@ -34,6 +36,7 @@ export type QueueItem = {
     severity: Severity
     confidence: number
     rationale: string
+    duplicateCount: number
   }
 }
 

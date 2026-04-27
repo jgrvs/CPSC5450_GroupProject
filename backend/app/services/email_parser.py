@@ -382,6 +382,18 @@ def parse_eml_bytes(eml_bytes: bytes, email_id:str) -> dict:
     # Generate message fingerprint
     fingerprint = hashlib.sha256(eml_bytes).hexdigest()
 
+    # Canonical fingerprint: hash only stable fields (strips To, Date, Message-ID).
+    # Two emails from the same phishing campaign share a canonical_fingerprint even
+    # if they were sent to different recipients or at different times.
+    _canonical_parts = "\n".join(filter(None, [
+        (message.get("From") or "").strip().lower(),
+        (message.get("Subject") or "").strip().lower(),
+        (message.get("Reply-To") or "").strip().lower(),
+        (message.get("Return-Path") or "").strip().lower(),
+        (plain_text or "").strip(),
+    ]))
+    canonical_fingerprint = hashlib.sha256(_canonical_parts.encode("utf-8")).hexdigest()
+
     # --- NEW: build a text blob for indicator extraction and keyword analysis ---
     header_blob = " ".join(filter(None, [
         message.get("Subject"),
@@ -417,7 +429,8 @@ def parse_eml_bytes(eml_bytes: bytes, email_id:str) -> dict:
 
     parsed_email = {
         "email_id": email_id, # this is unique per email
-        "fingerprint": fingerprint, # this is the same for identical emails, useful for de-duplication
+        "fingerprint": fingerprint,
+        "canonical_fingerprint": canonical_fingerprint,
         "source": {
             "dataset": "unknown",
             "split": None

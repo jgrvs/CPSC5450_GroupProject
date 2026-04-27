@@ -108,6 +108,16 @@ export function QueuePanel({
                       <Badge size="xs" color={statusColor(item.ui.status)} variant="light">
                         {item.ui.status}
                       </Badge>
+                      {item.parsed.duplicate_of && (
+                        <Badge size="xs" color="orange" variant="light">
+                          duplicate
+                        </Badge>
+                      )}
+                      {item.ui.duplicateCount > 0 && (
+                        <Badge size="xs" color="violet" variant="light">
+                          +{item.ui.duplicateCount} similar
+                        </Badge>
+                      )}
                     </Group>
                     <Text fw={600} size="sm" truncate>
                       {item.parsed.headers.subject ?? '(no subject)'}

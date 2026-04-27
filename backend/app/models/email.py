@@ -70,6 +70,8 @@ class EmailParsed(SQLModel, table=True):
     event_id: uuid.UUID = Field(primary_key=True, foreign_key="email_events.event_id")
 
     fingerprint: str = Field(index=True)
+    canonical_fingerprint: Optional[str] = Field(default=None, index=True)
+    duplicate_of: Optional[uuid.UUID] = Field(default=None, foreign_key="email_parsed.event_id", index=True)
 
     # hot fields for UI/ML
     from_address: Optional[str] = Field(default=None, index=True)

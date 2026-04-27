@@ -35,6 +35,13 @@ export function useEmailQueue() {
         }),
       )
 
+      // Count how many items share each canonical_fingerprint (excludes self)
+      const cfpCounts = new Map<string, number>()
+      for (const item of items) {
+        const cfp = item.parsed.canonical_fingerprint
+        if (cfp) cfpCounts.set(cfp, (cfpCounts.get(cfp) ?? 0) + 1)
+      }
+
       setQueue((prev) => {
         const decisionMap = new Map<string, QueueItem['ui']['status']>()
         for (const old of prev) {
@@ -45,10 +52,16 @@ export function useEmailQueue() {
 
         return items.map((item) => {
           const prevStatus = decisionMap.get(item.event_id)
-          if (prevStatus) {
-            return { ...item, ui: { ...item.ui, status: prevStatus } }
+          const cfp = item.parsed.canonical_fingerprint
+          const duplicateCount = cfp ? (cfpCounts.get(cfp) ?? 1) - 1 : 0
+          return {
+            ...item,
+            ui: {
+              ...item.ui,
+              ...(prevStatus ? { status: prevStatus } : {}),
+              duplicateCount,
+            },
           }
-          return item
         })
       })
 

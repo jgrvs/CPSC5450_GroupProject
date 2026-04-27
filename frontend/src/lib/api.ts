@@ -33,6 +33,8 @@ export type EmailEventResponse = {
 export type EmailParsedResponse = {
   event_id: string
   fingerprint: string
+  canonical_fingerprint: string | null
+  duplicate_of: string | null
   from_address: string | null
   to_address: string | null
   subject: string | null

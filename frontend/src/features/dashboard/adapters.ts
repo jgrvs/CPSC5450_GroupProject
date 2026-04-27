@@ -49,6 +49,8 @@ function parsedPayloadToParsedEmail(
 
   return {
     email_id: (payload.email_id as string) ?? eventId,
+    canonical_fingerprint: (payload.canonical_fingerprint as string) ?? null,
+    duplicate_of: null,
     headers: {
       from_address: (headers.from_address as string) ?? null,
       subject: (headers.subject as string) ?? null,
@@ -76,6 +78,7 @@ export function fromMessageDetail(detail: MessageDetailResponse): QueueItem | nu
     detail.event.event_id,
     detail.message.parsed_payload,
   )
+  parsed.duplicate_of = detail.message.duplicate_of
 
   return {
     event_id: detail.event.event_id,
@@ -85,6 +88,7 @@ export function fromMessageDetail(detail: MessageDetailResponse): QueueItem | nu
       severity: deriveSeverity(parsed),
       confidence: deriveConfidence(parsed.label),
       rationale: deriveRationale(parsed),
+      duplicateCount: 0,
     },
   }
 }
@@ -93,6 +97,8 @@ export function fromMessageDetail(detail: MessageDetailResponse): QueueItem | nu
 export function fromEmailEvent(event: EmailEventResponse): QueueItem {
   const parsed: ParsedEmail = {
     email_id: event.event_id,
+    canonical_fingerprint: null,
+    duplicate_of: null,
     headers: {
       from_address: null,
       subject: event.source_filename.replace(/\.eml$/i, ''),
@@ -118,6 +124,7 @@ export function fromEmailEvent(event: EmailEventResponse): QueueItem {
         event.status === 'done'
           ? 'Parsed — loading details...'
           : `Status: ${event.status}`,
+      duplicateCount: 0,
     },
   }
 }
