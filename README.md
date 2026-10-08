@@ -54,3 +54,15 @@ Add `-v` to also wipe the database volumes for a clean slate:
 ```bash
 docker compose down -v
 ```
+
+## My contributions
+
+Group project for CPSC 5450: an email triage system that ingests `.eml` files, parses them, scores phishing likelihood, and gives analysts a queue to review. Stack: FastAPI, Celery + Redis, Postgres, React (TanStack), Docker Compose. I worked on the backend pipeline and several analyst-facing features:
+
+- **Email parser and schema.** Wrote the initial parser, then reworked the JSON schema and parser to handle nullable fields and better URL extraction.
+- **API/parser separation.** Split routing from parsing logic. Routes are now thin, and the parser lives in a `services/` module.
+- **Async ingestion pipeline.** Moved parsing into Celery tasks, with an orchestration module, a storage module for DB access, filesystem-backed email storage, job status tracking, and an `/ingest/inbox` endpoint that triggers processing.
+- **Ingest improvements.** Per-file error handling, a Process Emails button on the dashboard, draining the full inbox with queue auto-refresh, a processing indicator, a 500-email synthetic test set, and purge endpoints for test resets.
+- **Role-based access control.** Three-tier role hierarchy (viewer / analyst / superuser), a user management page, viewer access restrictions, a raw-email modal for privileged roles, and a seeded default superuser.
+- **Campaign detection.** Canonical fingerprint deduplication so related phishing emails group into campaigns.
+- **Analyst UI.** Surfaced the model's phishing probability in the UI, added click-to-expand cards for indicators, flags and rationale, and saved analyst resolutions to the database. *(In progress on a feature branch; not yet merged to `main`.)*
